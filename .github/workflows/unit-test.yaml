@@ -17,4 +17,4 @@ jobs:
       - name: Download Module
         run: go mod download
       - name: Run unit-testing
-        run: go test internal/repository/postgres -v
+        run: go test ./internal/repository/postgres -v
