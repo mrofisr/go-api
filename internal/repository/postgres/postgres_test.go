@@ -1,4 +1,4 @@
-package main
+package repository
 
 import (
 	"context"
@@ -11,8 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// TestCRUD is a simple test to test CRUD operations
-func TestCRUD(t *testing.T) {
+func TestPersonRepository(t *testing.T) {
 	ctx := context.Background()
 
 	dbName := "postgres"
@@ -59,71 +58,84 @@ func TestCRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("all", func(t *testing.T) {
-
-		t.Cleanup(func() {
-			// 3. In each test, reset the DB to its snapshot state.
-			err = container.Restore(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
-		})
-
-		conn, err := pgx.Connect(context.Background(), dbURL)
+	t.Cleanup(func() {
+		// 3. In each test, reset the DB to its snapshot state.
+		err = container.Restore(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer conn.Close(context.Background())
+	})
 
-		// Create table
-		_, err = conn.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(50), age INT)")
-		if err != nil {
-			t.Fatalf("Unable to create table: %v", err)
-		}
+	conn, err := pgx.Connect(context.Background(), dbURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(context.Background())
 
-		// Insert data
-		_, err = conn.Exec(context.Background(), "INSERT INTO users (name, age) VALUES ($1, $2)", "Alice", 30)
+	p := NewPersonRepository(conn)
+
+	personName := "Alice"
+	personAge := 30
+	newPersonName := "Bob"
+	newPersonAge := 31
+
+	t.Run("insert-data", func(t *testing.T) {
+		err = p.Create(context.Background(), personName, personAge)
 		if err != nil {
 			t.Fatalf("Unable to insert data: %v", err)
 		}
+	})
 
-		// Read data
-		var name string
-		var age int
-		err = conn.QueryRow(context.Background(), "SELECT name, age FROM users WHERE id = $1", 1).Scan(&name, &age)
+	t.Run("read-data", func(t *testing.T) {
+		person, err := p.FindById(context.Background(), 1)
 		if err != nil {
 			t.Fatalf("Unable to read data: %v", err)
 		}
-		if name != "Alice" || age != 30 {
-			t.Fatalf("Expected name: %s, age: %d. Got name: %s, age: %d", "Alice", 30, name, age)
+		if person.Name != personName || person.Age != personAge {
+			t.Fatalf("Expected name: %s, age: %d. Got name: %s, age: %d", personName, personAge, person.Name, person.Age)
 		}
+	})
 
-		// Update data
-		_, err = conn.Exec(context.Background(), "UPDATE users SET age = $1 WHERE id = $2", 31, 1)
+	t.Run("read-all-data", func(t *testing.T) {
+		persons, err := p.FindAll(context.Background())
+		if err != nil {
+			t.Fatalf("Unable to read all data: %v", err)
+		}
+		if len(persons) != 1 || persons[0].Name != personName || persons[0].Age != personAge {
+			t.Fatalf("Expected name: %s, age: %d. Got name: %s, age: %d", personName, personAge, persons[0].Name, persons[0].Age)
+		}
+	})
+
+	t.Run("update-data", func(t *testing.T) {
+		err = p.Update(context.Background(), 1, newPersonName, newPersonAge)
 		if err != nil {
 			t.Fatalf("Unable to update data: %v", err)
 		}
+	})
 
-		// Read updated data
-		err = conn.QueryRow(context.Background(), "SELECT name, age FROM users WHERE id = $1", 1).Scan(&name, &age)
+	t.Run("read-updated-data", func(t *testing.T) {
+		person, err := p.FindById(context.Background(), 1)
 		if err != nil {
 			t.Fatalf("Unable to read updated data: %v", err)
 		}
-		if age != 31 {
-			t.Fatalf("Expected age: %d. Got age: %d", 31, age)
+		if person.Name != newPersonName || person.Age != newPersonAge {
+			t.Fatalf("Expected name: %s, age: %d. Got name: %s, age: %d", newPersonName, newPersonAge, person.Name, person.Age)
 		}
 
-		// Delete data
-		_, err = conn.Exec(context.Background(), "DELETE FROM users WHERE id = $1", 1)
+	})
+
+	t.Run("delete-data", func(t *testing.T) {
+		err = p.Delete(context.Background(), 1)
 		if err != nil {
 			t.Fatalf("Unable to delete data: %v", err)
 		}
 
-		// Verify deletion
-		var count int
-		err = conn.QueryRow(context.Background(), "SELECT COUNT(*) FROM users").Scan(&count)
+	})
+
+	t.Run("count-data", func(t *testing.T) {
+		count, err := p.Count(context.Background())
 		if err != nil {
-			t.Fatalf("Unable to verify deletion: %v", err)
+			t.Fatalf("Unable to count data: %v", err)
 		}
 		if count != 0 {
 			t.Fatalf("Expected count: %d. Got count: %d", 0, count)
