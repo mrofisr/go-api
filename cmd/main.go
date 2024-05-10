@@ -37,6 +37,7 @@ func main() {
 	// Run the server
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.RealIP)
 	r.Mount("/person", router.PersonRouter(personHandler))
 	// Create health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

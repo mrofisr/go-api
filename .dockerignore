@@ -1,0 +1,8 @@
+# Ignore for Golang
+README.md
+Dockerfile
+.env
+.gitignore
+docker-compose*
+LICENSE
+.github
