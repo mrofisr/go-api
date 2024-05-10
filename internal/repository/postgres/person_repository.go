@@ -3,9 +3,10 @@ package repository
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4"
-	"github.com/mrofisr/go-testing/internal/model"
 	"log"
+
+	"github.com/jackc/pgx/v4"
+	"github.com/mrofisr/go-api/internal/model"
 )
 
 type PersonRepository interface {
