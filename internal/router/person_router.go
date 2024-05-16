@@ -11,6 +11,7 @@ func PersonRouter(personHandler *handler.PersonHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", personHandler.GetPerson)
 	r.Get("/{id}", personHandler.GetPersonByID)
+	r.Get("/count", personHandler.CountPerson)
 	r.Post("/", personHandler.CreatePerson)
 	r.Put("/{id}", personHandler.UpdatePerson)
 	r.Delete("/{id}", personHandler.DeletePerson)

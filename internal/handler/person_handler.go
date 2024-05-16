@@ -8,6 +8,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/mrofisr/go-api/internal/model"
 	repository "github.com/mrofisr/go-api/internal/repository/postgres"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type PersonHandler struct {
@@ -15,8 +17,18 @@ type PersonHandler struct {
 }
 
 func (ph *PersonHandler) GetPerson(w http.ResponseWriter, r *http.Request) {
+	tracer := otel.GetTracerProvider()
+	ctx, span := tracer.Tracer("person-handler").Start(r.Context(), "GetPerson")
+	span.SetAttributes(
+		attribute.String("http.handler", "GetPerson"),
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.path", r.URL.Path),
+		attribute.String("http.host", r.Host),
+		attribute.Int("http.status_code", http.StatusOK),
+	)
+	defer span.End()
 	// Implementation
-	ctx := r.Context()
 	persons, err := ph.Repo.FindAll(ctx)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -34,8 +46,18 @@ func (ph *PersonHandler) GetPerson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ph *PersonHandler) GetPersonByID(w http.ResponseWriter, r *http.Request) {
+	tracer := otel.GetTracerProvider()
+	ctx, span := tracer.Tracer("person-handler").Start(r.Context(), "GetPersonByID")
+	span.SetAttributes(
+		attribute.String("http.handler", "GetPersonByID"),
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.path", r.URL.Path),
+		attribute.String("http.host", r.Host),
+		attribute.Int("http.status_code", http.StatusOK),
+	)
+	defer span.End()
 	// Implementation
-	ctx := r.Context()
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -58,8 +80,18 @@ func (ph *PersonHandler) GetPersonByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ph *PersonHandler) CreatePerson(w http.ResponseWriter, r *http.Request) {
+	tracer := otel.GetTracerProvider()
+	ctx, span := tracer.Tracer("person-handler").Start(r.Context(), "CreatePerson")
+	span.SetAttributes(
+		attribute.String("http.handler", "CreatePerson"),
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.path", r.URL.Path),
+		attribute.String("http.host", r.Host),
+		attribute.Int("http.status_code", http.StatusOK),
+	)
+	defer span.End()
 	// Implementation
-	ctx := r.Context()
 	// Data from request body
 	person := model.Person{}
 	err := json.NewDecoder(r.Body).Decode(&person)
@@ -78,8 +110,18 @@ func (ph *PersonHandler) CreatePerson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ph *PersonHandler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
+	tracer := otel.GetTracerProvider()
+	ctx, span := tracer.Tracer("person-handler").Start(r.Context(), "UpdatePerson")
+	span.SetAttributes(
+		attribute.String("http.handler", "UpdatePerson"),
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.path", r.URL.Path),
+		attribute.String("http.host", r.Host),
+		attribute.Int("http.status_code", http.StatusOK),
+	)
+	defer span.End()
 	// Implementation
-	ctx := r.Context()
 	newPerson := model.Person{}
 	err := json.NewDecoder(r.Body).Decode(&newPerson)
 	if err != nil {
@@ -102,8 +144,18 @@ func (ph *PersonHandler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ph *PersonHandler) DeletePerson(w http.ResponseWriter, r *http.Request) {
+	tracer := otel.GetTracerProvider()
+	ctx, span := tracer.Tracer("person-handler").Start(r.Context(), "DeletePerson")
+	span.SetAttributes(
+		attribute.String("http.handler", "DeletePerson"),
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.path", r.URL.Path),
+		attribute.String("http.host", r.Host),
+		attribute.Int("http.status_code", http.StatusOK),
+	)
+	defer span.End()
 	// Implementation
-	ctx := r.Context()
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -117,6 +169,29 @@ func (ph *PersonHandler) DeletePerson(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Person deleted", "id": ` + strconv.Itoa(id) + `}`))
+}
+
+func (ph *PersonHandler) CountPerson(w http.ResponseWriter, r *http.Request) {
+	tracer := otel.GetTracerProvider()
+	ctx, span := tracer.Tracer("person-handler").Start(r.Context(), "CountPerson")
+	span.SetAttributes(
+		attribute.String("http.handler", "CountPerson"),
+		attribute.String("http.method", r.Method),
+		attribute.String("http.url", r.URL.String()),
+		attribute.String("http.path", r.URL.Path),
+		attribute.String("http.host", r.Host),
+		attribute.Int("http.status_code", http.StatusOK),
+	)
+	defer span.End()
+	// Implementation
+	count, err := ph.Repo.Count(ctx)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"user_count": ` + strconv.Itoa(count) + `}`))
 }
 
 func NewPersonHandler(repo repository.PersonRepository) *PersonHandler {

@@ -1,5 +1,7 @@
+name: End-to-End Workflow
 on:
   workflow_dispatch:
+
 jobs:
   Test:
     name: unit-testing
@@ -16,3 +18,62 @@ jobs:
         run: go mod download
       - name: Run unit-testing
         run: go test ./internal/repository/postgres -v
+
+  Build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: ">=1.20"
+          cache: true
+      - name: Download Module
+        run: go mod download
+      - name: Build
+        run: go build -o main ./cmd/main.go
+
+  Docker-Build:
+    name: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup Docker
+        uses: actions/setup-docker@v2
+      - name: Build Docker Image
+        env:
+          RELEASE_VERSION: ${{ github.sha }}
+        run: docker build -t ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION .
+      - name: Push Docker Image
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION
+
+  Deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: [Docker-Build]
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Setup SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            docker stop ${{ secrets.CONTAINER_NAME }}
+            docker rm ${{ secrets.CONTAINER_NAME }}
+            docker run -d --name ${{ secrets.CONTAINER_NAME }} -p ${{ secrets.PORT }}:8080 ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION
+      - name: Check Deploy
+        run: curl -s -o /dev/null -w "%{http_code}" ${{ secrets.HOST }}:${{ secrets.PORT }}
+        continue-on-error: true
+        timeout-minutes: 2
+      - name: Deploy Success
+        if: steps.Check Deploy.outputs.run == '200'
+        run: echo "Deploy Success"
